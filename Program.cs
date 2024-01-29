@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using System.Text;
 using JwtAspNet;
+using JwtAspNet.Extensions;
 using JwtAspNet.Models;
 using JwtAspNet.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -23,7 +25,10 @@ builder.Services.AddAuthentication(x =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(x =>
+{
+    x.AddPolicy("admin", p => p.RequireRole("admin"));
+});
 
 var app = builder.Build();
 app.UseAuthentication();
@@ -43,6 +48,17 @@ app.MapGet("/login", (TokenService service) =>
     return service.Create(user);
 });
 
-app.MapGet("/authorized", () => "Acesso autorizado").RequireAuthorization();
+app.MapGet("/authorized", (ClaimsPrincipal user) => new
+{
+    id = user.Id(),
+    name = user.Name(),
+    email = user.Email(),
+    givenName = user.GivenName(),
+    image = user.Image()
+})
+  .RequireAuthorization();
+
+app.MapGet("/admin", () => "Acesso admin autorizado")
+    .RequireAuthorization("admin");
 
 app.Run();
